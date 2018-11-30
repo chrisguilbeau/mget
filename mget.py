@@ -70,8 +70,9 @@ def is_range_supported(urlParts):
     comes back with 200 it means that chunking is not supported
     '''
     cnn = get_cnn(urlParts.netloc)
-    cnn.request('HEAD', urlParts.path, headers={'Range': f'bytes={0-1}'})
+    cnn.request('GET', urlParts.path, headers={'Range': f'bytes={0-1}'})
     resp = cnn.getresponse()
+    print(resp.status)
     return resp.status == 206
 
 def get_chunk(args):
