@@ -59,8 +59,20 @@ def get_size(urlParts):
     Return size of the desired file
     '''
     resp = get_head_resp(urlParts)
-    assert resp.status in (200,), "File doesn't exist"
+    if resp.status != 200:
+        print("File doesn't exist on server")
+        exit(1)
     return int(resp.getheader('Content-length'))
+
+def is_range_supported(urlParts):
+    '''
+    Return if the range header is supported by the server. If a request
+    comes back with 200 it means that chunking is not supported
+    '''
+    cnn = get_cnn(urlParts.netloc)
+    cnn.request('HEAD', urlParts.path, headers={'Range': f'bytes={0-1}'})
+    resp = cnn.getresponse()
+    return resp.status == 206
 
 def get_chunk(args):
     '''
@@ -74,13 +86,6 @@ def get_chunk(args):
         cnn.request('GET', urlParts.path,
             headers={'Range': f'bytes={start}-{end}'})
         resp = cnn.getresponse()
-        try:
-            # if a request comes back with 200 it means that chunking
-            # is not supported
-            assert resp.status == 206
-        except AssertionError:
-            print(f'Server does not support Range header ({resp.reason})')
-            exit(1)
         content = resp.read()
         return filename, content
     finally:
@@ -114,12 +119,12 @@ def mget(url, chunk_size, filename, max_chunks, force, dop):
     urlParts = urlparse(url)
     # check the file
     filename = filename or urlParts.path.split('/')[-1]
-    try:
-        assert force or not isfile(filename)
-    except AssertionError:
+    if not force and isfile(filename):
         print(f'{filename} already exists')
         exit(1)
-    print(f"Downloading first {max_chunks} chunks of '{url}' to '{filename}'")
+    if not is_range_supported(urlParts):
+        print(f'Server does not support Range header')
+        exit(1)
     parts = write_chunks(urlParts, chunk_size, max_chunks, dop)
     # write the file before the main reconstruction loop in case the
     # file you are fetching is empty
