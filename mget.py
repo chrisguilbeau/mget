@@ -123,6 +123,7 @@ def mget(url, chunk_size, filename, max_chunks, force, dop):
     except AssertionError:
         print(f'{filename} already exists')
         exit(1)
+    print(f"Downloading first {max_chunks} chunks of '{url}' to '{filename}'")
     parts = write_chunks(urlParts, chunk_size, max_chunks, dop)
     # write the file before the main reconstruction loop in case the
     # file you are fetching is empty
