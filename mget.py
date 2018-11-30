@@ -20,9 +20,6 @@ Usage: {} [options] url
     Use <integer> concurrent connections (default is {})
 '''
 
-from asyncio      import gather
-from asyncio      import get_event_loop
-from contextlib   import closing
 from getopt       import getopt
 from http         import client
 from os.path      import isfile
@@ -87,29 +84,6 @@ def get_chunk(args):
         return filename, content
     finally:
         cnn.close()
-
-def write_chunks(urlParts, chunk_size, max_chunks, dop):
-    '''
-    Asynchronously fetch file in chunks and write them to disk,
-    return a list of files that have been written
-    '''
-    size = get_size(urlParts)
-    def get_chunk_args(i):
-        return (urlParts, i, min(i + chunk_size - 1, size), i)
-    # for performance sake, only calculate the arguments for the
-    # chunks you need
-    max_size = (min(size, chunk_size * max_chunks + 10))
-    chunk_args = [get_chunk_args(i)
-        for i in range(0, max_size, chunk_size)][:max_chunks]
-    chunk_arg_sets = [chunk_args[i: i + dop]
-        for i in range(0, len(chunk_args), dop)]
-    results = []
-    print('Fetching file in chunks', end='')
-    with closing(get_event_loop()) as loop:
-        for chunk_arg_set in chunk_arg_sets:
-            tasks = map(get_chunk, chunk_arg_set)
-            results.extend(loop.run_until_complete(gather(*tasks)))
-    return results
 
 def write_chunks(urlParts, chunk_size, max_chunks, dop):
     '''
