@@ -83,7 +83,8 @@ async def get_chunk(args):
         except AssertionError:
             print(f'Server does not support Range header ({resp.reason})')
             exit(1)
-        return filename, resp.read()
+        content = resp.read()
+        return filename, content
     finally:
         cnn.close()
 
@@ -154,6 +155,11 @@ if __name__ == '__main__':
             elif o == '-f':
                 force = True
             elif o == '-p':
+                raise NotImplementedError(
+                    'Parallelism is not implemented yet, '
+                    'ran into trouble with '
+                    'standard http.client library need to '
+                    'look into an asyncio networking package')
                 dop = int(a)
     except Exception as e:
         print(str(e))
