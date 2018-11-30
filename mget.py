@@ -13,9 +13,6 @@ Usage: {} [options] url
 -m <integer>
     Download <integer> chunks (default is {})
 
--p <integer>
-    Use <integer> simultaneous connections for async download (default is {})
-
 -f
     Force writing file even if it exists
 '''
@@ -163,7 +160,7 @@ if __name__ == '__main__':
                 dop = int(a)
     except Exception as e:
         print(str(e))
-        print(__doc__.format(argv[0], CHUNK_SIZE, MAX_CHUNKS, DOP))
+        print(__doc__.format(argv[0], CHUNK_SIZE, MAX_CHUNKS))
         exit(1)
     mget(url=url, chunk_size=chunk_size, filename=filename,
         max_chunks=max_chunks, force=force, dop=dop)
