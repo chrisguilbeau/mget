@@ -20,13 +20,15 @@ Usage: {} [options] url
     Use <integer> concurrent connections (default is {})
 '''
 
-from getopt       import getopt
-from http         import client
-from os.path      import isfile
-from sys          import argv
-from sys          import exit
-from sys          import stdout
-from urllib.parse import urlparse
+from concurrent.futures import as_completed
+from concurrent.futures import ThreadPoolExecutor
+from getopt             import getopt
+from http               import client
+from os.path            import isfile
+from sys                import argv
+from sys                import exit
+from sys                import stdout
+from urllib.parse       import urlparse
 
 # default values
 CHUNK_SIZE = 1048576 # https://en.wikipedia.org/wiki/Mebibyte
@@ -41,8 +43,7 @@ def get_cnn(netloc):
 
 def get_head_resp(urlParts):
     '''
-    Return head response for the desired file, cache them so only one
-    head request has to be made
+    Return head response for the desired file
     '''
     try:
         cnn = get_cnn(urlParts.netloc)
@@ -98,8 +99,6 @@ def write_chunks(urlParts, chunk_size, max_chunks, dop):
     max_size = (min(size, chunk_size * max_chunks + 10))
     chunk_args = [get_chunk_args(i)
         for i in range(0, max_size, chunk_size)][:max_chunks]
-    from concurrent.futures import ThreadPoolExecutor
-    from concurrent.futures import as_completed
     results = []
     with ThreadPoolExecutor(max_workers=dop) as pool:
         ftr = {pool.submit(get_chunk, arg): arg for arg in chunk_args}
