@@ -15,6 +15,9 @@ Usage: {} [options] url
 
 -f
     Force writing file even if it exists
+
+-p <integer>
+    Use <integer> concurrent connections (default is {})
 '''
 
 from asyncio      import gather
@@ -61,7 +64,7 @@ def get_size(urlParts):
     assert resp.status in (200,), "File doesn't exist"
     return int(resp.getheader('Content-length'))
 
-async def get_chunk(args):
+def get_chunk(args):
     '''
     Fetch chunk, write to file and return the filename.
     '''
@@ -108,6 +111,28 @@ def write_chunks(urlParts, chunk_size, max_chunks, dop):
             results.extend(loop.run_until_complete(gather(*tasks)))
     return results
 
+def write_chunks(urlParts, chunk_size, max_chunks, dop):
+    '''
+    Asynchronously fetch file in chunks and write them to disk,
+    return a list of files that have been written
+    '''
+    size = get_size(urlParts)
+    def get_chunk_args(i):
+        return (urlParts, i, min(i + chunk_size - 1, size), i)
+    # for performance sake, only calculate the arguments for the
+    # chunks you need
+    max_size = (min(size, chunk_size * max_chunks + 10))
+    chunk_args = [get_chunk_args(i)
+        for i in range(0, max_size, chunk_size)][:max_chunks]
+    from concurrent.futures import ThreadPoolExecutor
+    from concurrent.futures import as_completed
+    results = []
+    with ThreadPoolExecutor(max_workers=dop) as pool:
+        ftr = {pool.submit(get_chunk, arg): arg for arg in chunk_args}
+        for f in as_completed(ftr):
+            results.append(f.result())
+    return results
+
 def mget(url, chunk_size, filename, max_chunks, force, dop):
     '''
     Get a file referenced by a url in parts using chunk_size and write
@@ -152,15 +177,10 @@ if __name__ == '__main__':
             elif o == '-f':
                 force = True
             elif o == '-p':
-                raise NotImplementedError(
-                    'Parallelism is not implemented yet, '
-                    'ran into trouble with '
-                    'standard http.client library need to '
-                    'look into an asyncio networking package')
                 dop = int(a)
     except Exception as e:
         print(str(e))
-        print(__doc__.format(argv[0], CHUNK_SIZE, MAX_CHUNKS))
+        print(__doc__.format(argv[0], CHUNK_SIZE, MAX_CHUNKS, DOP))
         exit(1)
     mget(url=url, chunk_size=chunk_size, filename=filename,
         max_chunks=max_chunks, force=force, dop=dop)
