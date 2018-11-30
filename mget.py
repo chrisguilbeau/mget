@@ -72,7 +72,6 @@ def is_range_supported(urlParts):
     cnn = get_cnn(urlParts.netloc)
     cnn.request('GET', urlParts.path, headers={'Range': f'bytes={0-1}'})
     resp = cnn.getresponse()
-    print(resp.status)
     return resp.status == 206
 
 def get_chunk(args):
